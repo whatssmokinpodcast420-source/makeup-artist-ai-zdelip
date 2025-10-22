@@ -5,6 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/IconSymbol";
 import { colors } from "@/styles/commonStyles";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
+import ModelPreview from "@/components/ModelPreview";
+import { getModelForComplexion } from "@/utils/modelSelector";
 
 interface MakeupRecommendation {
   name: string;
@@ -24,6 +26,12 @@ export default function RecommendationsScreen() {
   const { skinTone, undertone, eyeColor, faceShape } = params;
 
   console.log("Received params:", { skinTone, undertone, eyeColor, faceShape });
+
+  // Get model image for user's complexion
+  const modelImage = getModelForComplexion(
+    (skinTone as string) || 'Medium',
+    (undertone as string) || 'Neutral'
+  );
 
   // Mock recommendations - In a real app, this would come from an AI API
   const recommendations: MakeupRecommendation[] = [
@@ -177,40 +185,71 @@ export default function RecommendationsScreen() {
             </View>
 
             <View style={styles.cardContent}>
+              {/* Model Preview Section */}
+              <ModelPreview
+                modelImageUrl={modelImage.url}
+                skinTone={skinTone as string}
+                undertone={undertone as string}
+                occasionName={rec.name}
+                occasionColor={getOccasionColor(rec.name)}
+              />
+
               <Text style={styles.lookSummary}>{rec.look_summary}</Text>
 
-              <View style={styles.productSection}>
-                <Text style={styles.productLabel}>Foundation</Text>
-                <Text style={styles.productValue}>{rec.foundation_shade}</Text>
+              <View style={styles.productsGrid}>
+                <View style={styles.productSection}>
+                  <View style={styles.productHeader}>
+                    <IconSymbol name="drop.fill" size={16} color={getOccasionColor(rec.name)} />
+                    <Text style={styles.productLabel}>Foundation</Text>
+                  </View>
+                  <Text style={styles.productValue}>{rec.foundation_shade}</Text>
+                </View>
+
+                <View style={styles.productSection}>
+                  <View style={styles.productHeader}>
+                    <IconSymbol name="paintbrush.fill" size={16} color={getOccasionColor(rec.name)} />
+                    <Text style={styles.productLabel}>Lip Shade</Text>
+                  </View>
+                  <Text style={styles.productValue}>{rec.lip_shade}</Text>
+                </View>
+
+                <View style={styles.productSection}>
+                  <View style={styles.productHeader}>
+                    <IconSymbol name="eye.fill" size={16} color={getOccasionColor(rec.name)} />
+                    <Text style={styles.productLabel}>Eye Palette</Text>
+                  </View>
+                  <Text style={styles.productValue}>{rec.eye_palette}</Text>
+                </View>
+
+                <View style={styles.productSection}>
+                  <View style={styles.productHeader}>
+                    <IconSymbol name="heart.fill" size={16} color={getOccasionColor(rec.name)} />
+                    <Text style={styles.productLabel}>Blush</Text>
+                  </View>
+                  <Text style={styles.productValue}>{rec.blush_shade}</Text>
+                </View>
               </View>
 
-              <View style={styles.productSection}>
-                <Text style={styles.productLabel}>Lip Shade</Text>
-                <Text style={styles.productValue}>{rec.lip_shade}</Text>
-              </View>
-
-              <View style={styles.productSection}>
-                <Text style={styles.productLabel}>Eye Palette</Text>
-                <Text style={styles.productValue}>{rec.eye_palette}</Text>
-              </View>
-
-              <View style={styles.productSection}>
-                <Text style={styles.productLabel}>Blush</Text>
-                <Text style={styles.productValue}>{rec.blush_shade}</Text>
-              </View>
-
-              <View style={styles.productSection}>
-                <Text style={styles.productLabel}>Brushes Needed</Text>
-                {rec.brushes_needed.map((brush, idx) => (
-                  <Text key={idx} style={styles.brushItem}>• {brush}</Text>
-                ))}
+              <View style={styles.brushesSection}>
+                <Text style={styles.brushesTitle}>Tools You'll Need</Text>
+                <View style={styles.brushesList}>
+                  {rec.brushes_needed.map((brush, idx) => (
+                    <View key={idx} style={styles.brushItem}>
+                      <IconSymbol name="checkmark.circle.fill" size={14} color={colors.accent} />
+                      <Text style={styles.brushText}>{brush}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
 
               <View style={styles.affiliateSection}>
-                <Text style={styles.affiliateTitle}>Shop Products</Text>
+                <Text style={styles.affiliateTitle}>Shop This Look</Text>
                 {rec.product_affiliate_urls.map((url, idx) => (
                   <Pressable key={idx} style={styles.affiliateButton}>
-                    <Text style={styles.affiliateButtonText}>Product {idx + 1}</Text>
+                    <View style={styles.affiliateButtonContent}>
+                      <IconSymbol name="bag.fill" size={18} color={colors.primary} />
+                      <Text style={styles.affiliateButtonText}>Product {idx + 1}</Text>
+                    </View>
                     <IconSymbol name="arrow.right" size={16} color={colors.primary} />
                   </Pressable>
                 ))}
@@ -305,8 +344,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontStyle: 'italic',
   },
+  productsGrid: {
+    gap: 16,
+    marginBottom: 20,
+  },
   productSection: {
-    marginBottom: 16,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 14,
+  },
+  productHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
   },
   productLabel: {
     fontSize: 12,
@@ -314,27 +365,44 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 6,
   },
   productValue: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text,
     fontWeight: '500',
+    lineHeight: 20,
+  },
+  brushesSection: {
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
+  },
+  brushesTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 10,
+  },
+  brushesList: {
+    gap: 8,
   },
   brushItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  brushText: {
     fontSize: 14,
     color: colors.text,
-    marginLeft: 8,
-    marginTop: 4,
   },
   affiliateSection: {
-    marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: colors.textSecondary + '30',
   },
   affiliateTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 12,
@@ -344,12 +412,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.highlight,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 10,
+    padding: 14,
     marginBottom: 8,
   },
+  affiliateButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   affiliateButtonText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.primary,
   },
